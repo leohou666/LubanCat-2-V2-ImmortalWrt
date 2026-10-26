@@ -131,6 +131,16 @@ define Device/cyber_cyber3588-aib
 endef
 TARGET_DEVICES += cyber_cyber3588-aib
 
+define Device/embedfire_lubancat-2
+  $(Device/rk3568)
+  DEVICE_VENDOR := EmbedFire
+  DEVICE_MODEL := LubanCat 2
+  DEVICE_DTS := rk3568-lubancat-2
+  UBOOT_DEVICE_NAME := lubancat-2-rk3568
+  DEVICE_PACKAGES := kmod-ata-ahci-dwc kmod-hwmon-pwmfan luci-app-sqm
+endef
+TARGET_DEVICES += embedfire_lubancat-2
+
 define Device/ezpro_mrkaio-m68s
   $(Device/rk3568)
   DEVICE_VENDOR := EZPRO

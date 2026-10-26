@@ -1,0 +1,64 @@
+--- a/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
+@@ -726,3 +726,61 @@
+ 		};
+ 	};
+ };
++
++/* LubanCat 2 V2 board fan: PWM0_M0, 20 kHz. */
++/ {
++	fan: pwm-fan {
++		compatible = "pwm-fan";
++		#cooling-cells = <2>;
++		pwms = <&pwm0 0 50000 0>;
++		cooling-levels = <0 100 150 200 255>;
++	};
++};
++
++&pwm0 {
++	status = "okay";
++};
++
++&cpu_thermal {
++	trips {
++		fan_trip1: fan-trip1 {
++			temperature = <40000>;
++			hysteresis = <2000>;
++			type = "active";
++		};
++		fan_trip2: fan-trip2 {
++			temperature = <45000>;
++			hysteresis = <2000>;
++			type = "active";
++		};
++		fan_trip3: fan-trip3 {
++			temperature = <50000>;
++			hysteresis = <2000>;
++			type = "active";
++		};
++		fan_trip4: fan-trip4 {
++			temperature = <55000>;
++			hysteresis = <2000>;
++			type = "active";
++		};
++	};
++
++	cooling-maps {
++		fan-map1 {
++			trip = <&fan_trip1>;
++			cooling-device = <&fan 1 1>;
++		};
++		fan-map2 {
++			trip = <&fan_trip2>;
++			cooling-device = <&fan 2 2>;
++		};
++		fan-map3 {
++			trip = <&fan_trip3>;
++			cooling-device = <&fan 3 3>;
++		};
++		fan-map4 {
++			trip = <&fan_trip4>;
++			cooling-device = <&fan 4 4>;
++		};
++	};
++};

@@ -1,0 +1,95 @@
+Align Ethernet timing and PHY LEDs with the EmbedFire LubanCat 2 V2 DTS.
+The JL2XXX_LED_MODE_EN name replaces the vendor JL1XXX alias (same bit).
+
+--- a/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
+@@ -9,6 +9,7 @@
+ #include <dt-bindings/gpio/gpio.h>
+ #include <dt-bindings/leds/common.h>
+ #include <dt-bindings/pinctrl/rockchip.h>
++#include <dt-bindings/phy/jlsemi-dt-phy.h>
+ #include <dt-bindings/soc/rockchip,vop2.h>
+ #include "rk3568.dtsi"
+ 
+@@ -447,11 +448,12 @@
+ 
+ 	snps,reset-gpio = <&gpio2 RK_PD3 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;
+-	/* Reset time is 20ms, 100ms for rtl8211f */
+-	snps,reset-delays-us = <0 20000 100000>;
++	/* LubanCat 2 V2: hold PHY reset for 75 ms, then wait 100 ms. */
++	snps,reset-delays-us = <0 75000 100000>;
+ 
+ 	assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+ 	assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>, <&cru CLK_MAC0_2TOP>;
++	assigned-clock-rates = <0>, <125000000>;
+ 
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&gmac0_miim
+@@ -460,8 +462,8 @@
+ 		     &gmac0_rgmii_clk
+ 		     &gmac0_rgmii_bus>;
+ 
+-	tx_delay = <0x22>;
+-	rx_delay = <0x0e>;
++	tx_delay = <0x18>;
++	rx_delay = <0x07>;
+ 
+ 	phy-handle = <&rgmii_phy0>;
+ 	status = "okay";
+@@ -471,6 +473,14 @@
+ 	rgmii_phy0: phy@0 {
+ 		compatible = "ethernet-phy-ieee802.3-c22";
+ 		reg = <0x0>;
++		jl2xxx,led-enable = <(JL2XXX_LED_STATIC_OP_EN | JL2XXX_LED_MODE_EN)>;
++		jl2xxx,led-mode = <(JL2XXX_LED1_LINK10 |
++				   JL2XXX_LED1_LINK100 |
++				   JL2XXX_LED1_LINK1000 |
++				   JL2XXX_LED2_LINK10 |
++				   JL2XXX_LED2_LINK100 |
++				   JL2XXX_LED2_LINK1000 |
++				   JL2XXX_LED2_ACTIVITY)>;
+ 	};
+ };
+ 
+@@ -480,11 +490,12 @@
+ 
+ 	snps,reset-gpio = <&gpio3 RK_PA2 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;
+-	/* Reset time is 20ms, 100ms for rtl8211f */
+-	snps,reset-delays-us = <0 20000 100000>;
++	/* LubanCat 2 V2: hold PHY reset for 75 ms, then wait 100 ms. */
++	snps,reset-delays-us = <0 75000 100000>;
+ 
+ 	assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
+ 	assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>, <&cru CLK_MAC1_2TOP>;
++	assigned-clock-rates = <0>, <125000000>;
+ 
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&gmac1m1_miim
+@@ -493,8 +504,8 @@
+ 		     &gmac1m1_rgmii_clk
+ 		     &gmac1m1_rgmii_bus>;
+ 
+-	tx_delay = <0x21>;
+-	rx_delay = <0x0e>;
++	tx_delay = <0x22>;
++	rx_delay = <0x07>;
+ 
+ 	phy-handle = <&rgmii_phy1>;
+ 	status = "okay";
+@@ -504,6 +515,14 @@
+ 	rgmii_phy1: phy@0 {
+ 		compatible = "ethernet-phy-ieee802.3-c22";
+ 		reg = <0x0>;
++		jl2xxx,led-enable = <(JL2XXX_LED_STATIC_OP_EN | JL2XXX_LED_MODE_EN)>;
++		jl2xxx,led-mode = <(JL2XXX_LED1_LINK10 |
++				   JL2XXX_LED1_LINK100 |
++				   JL2XXX_LED1_LINK1000 |
++				   JL2XXX_LED2_LINK10 |
++				   JL2XXX_LED2_LINK100 |
++				   JL2XXX_LED2_LINK1000 |
++				   JL2XXX_LED2_ACTIVITY)>;
+ 	};
+ };
+ 
