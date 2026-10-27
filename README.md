@@ -1,93 +1,98 @@
-<img src="https://avatars.githubusercontent.com/u/53193414?s=200&v=4" alt="logo" width="200" height="200" align="right">
+# ImmortalWrt for LubanCat 2 V2
 
-# Project ImmortalWrt
+基于 [ImmortalWrt](https://github.com/immortalwrt/immortalwrt) (`openwrt-25.12` / Linux 6.12) 为野火 **LubanCat 2 V2** 适配的固件。
 
-ImmortalWrt is a fork of [OpenWrt](https://openwrt.org), with more packages ported, more devices supported, default optimized profiles and localization modifications for mainland China users.<br/>
-Compared to upstream, we allow to use (non-upstreamable) modifications/hacks to provide better feature/performance/support.
+集成了 JLSemi PHY 网卡驱动、官方时序补丁、PWM 自动温控风扇，并针对多核做了网卡中断绑核与开箱即用的 SQM 流控预设。
 
-Default login address: http://192.168.1.1 or http://immortalwrt.lan, username: __root__, password: _none_.
+## 硬件规格与支持
 
-## Download
-Built firmware images are available for many architectures and come with a package selection to be used as WiFi home router. To quickly find a factory image usable to migrate from a vendor stock firmware to ImmortalWrt, try the *Firmware Selector*.
+- **硬件型号**：野火 LubanCat 2 V2（RK3568，4GB RAM，双千兆网口，JLSemi PHY）
+- **内核与引导**：Linux 6.12 + U-Boot 2025.10
+- **构建目标**：`Rockchip` -> `ARMv8` -> `EmbedFire LubanCat 2` (`embedfire_lubancat-2`)
+- **引导介质**：TF 卡 / eMMC
 
-- [ImmortalWrt Firmware Selector](https://firmware-selector.immortalwrt.org/)
+## 核心适配与优化
 
-If your device is supported, please follow the **Info** link to see install instructions or consult the support resources listed below.
+### 1. JLSemi 网卡驱动与时序对齐
+- **驱动移植**：移植 JLSemi 1.2.9 PHY 驱动并适配 Linux 6.12 字符串 API（正确识别 PHY ID `0x937c4032` 为 `JL2xxx Gigabit Ethernet`），解决通用驱动下的 DMA 初始化超时与反复协商断流问题。
+- **时序对齐**：按照官方设备树对齐 GMAC0（`0x18/0x07`）与 GMAC1（`0x22/0x07`）TX/RX 延迟、125MHz 时钟配置及复位延时。
 
-## Development
-To build your own firmware you need a GNU/Linux, BSD or macOS system (case sensitive filesystem required). Cygwin is unsupported because of the lack of a case sensitive file system.<br/>
+### 2. 中断与 RPS 多核分配
+通过 netifd 的 platform packet-steering 脚本自动绑定核心，避免流量压在单核：
+- `eth0` 中断：绑定 **CPU 1**
+- `eth1` 中断：绑定 **CPU 3**
+- 接收端 RPS：分流至 **CPU 0、CPU 2**（掩码 `0x5`）
 
-  ### Requirements
-  To build with this project, Debian 11 is preferred. And you need use the CPU based on AMD64 architecture, with at least 4GB RAM and 25 GB available disk space. Make sure the __Internet__ is accessible.
+### 3. PWM 自动温控风扇
+使用 `pwm-fan` 驱动（PWM0_M0，20kHz），阶梯温控，兼顾静音与散热：
+- `< 40°C`：停转
+- `40°C`：档位 100
+- `45°C`：档位 150
+- `50°C`：档位 200
+- `≥ 55°C`：全速 255
+- 各档位预设 2°C 回差，避免临界温度频繁切档。
 
-  The following tools are needed to compile ImmortalWrt, the package names vary between distributions.
+### 4. 预设网络与 SQM 流控
+- **接口划分**：`eth0` 为 WAN（DHCP 客户端），`eth1` 为 LAN（桥接 `br-lan`）。
+- **默认网段**：建议配置为 `192.168.3.1`，避免与常见上级光猫冲突。
+- **SQM 预设**：集成 SQM，首次开机自动应用：
+  - 绑定 `eth0` (WAN)
+  - 下载限速 750 Mbps，上传不限
+  - 队列算法：`fq_codel` + `simplest_tbf.qos`
 
-  - Here is an example for Debian/Ubuntu users:<br/>
-    - Method 1:
-      <details>
-        <summary>Setup dependencies via APT</summary>
+## 快速编译
 
-        ```bash
-        sudo apt update -y
-        sudo apt full-upgrade -y
-        sudo apt install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
-          bzip2 ccache clang cmake cpio curl device-tree-compiler ecj fastjar flex gawk gettext gcc-multilib \
-          g++-multilib git gnutls-dev gperf haveged help2man intltool lib32gcc-s1 libc6-dev-i386 libelf-dev \
-          libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev \
-          libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm lrzsz mkisofs msmtp nano \
-          ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply python3-docutils \
-          python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs \
-          upx-ucl unzip vim wget xmlto xxd zlib1g-dev zstd
-        ```
-      </details>
-    - Method 2:
-      ```bash
-      sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-      ```
+### 1. 环境与配置
+推荐使用 Debian 12 / 13 构建环境（Python ≥ 3.10）：
 
-  Note:
-  - Do everything as an unprivileged user, not root, without sudo.
-  - Using CPUs based on other architectures should be fine to compile ImmortalWrt, but more hacks are needed - No warranty at all.
-  - You must __not__ have spaces or non-ascii characters in PATH or in the work folders on the drive.
-  - If you're using Windows Subsystem for Linux (or WSL), removing Windows folders from PATH is required, please see [Build system setup WSL](https://openwrt.org/docs/guide-developer/build-system/wsl) documentation.
-  - Using macOS as the host build OS is __not__ recommended. No warranty at all. You can get tips from [Build system setup macOS](https://openwrt.org/docs/guide-developer/build-system/buildroot.exigence.macosx) documentation.
-  - For more details, please see [Build system setup](https://openwrt.org/docs/guide-developer/build-system/install-buildsystem) documentation.
+```bash
+./scripts/feeds update -a
+./scripts/feeds install -a
+make menuconfig
+```
 
-  ### Quickstart
-  1. Run `git clone -b <branch> --single-branch --filter=blob:none https://github.com/immortalwrt/immortalwrt` to clone the source code.
-  2. Run `cd immortalwrt` to enter source directory.
-  3. Run `./scripts/feeds update -a` to obtain all the latest package definitions defined in feeds.conf / feeds.conf.default
-  4. Run `./scripts/feeds install -a` to install symlinks for all obtained packages into package/feeds/
-  5. Run `make menuconfig` to select your preferred configuration for the toolchain, target system & firmware packages.
-  6. Run `make` to build your firmware. This will download all sources, build the cross-compile toolchain and then cross-compile the GNU/Linux kernel & all chosen applications for your target system.
+### 2. 目标选择
+在 menuconfig 中配置：
+```text
+Target System  -> Rockchip
+Subtarget      -> ARMv8
+Target Profile -> EmbedFire LubanCat 2
+```
 
-  ### Related Repositories
-  The main repository uses multiple sub-repositories to manage packages of different categories. All packages are installed via the OpenWrt package manager called opkg. If you're looking to develop the web interface or port packages to ImmortalWrt, please find the fitting repository below.
-  - [LuCI Web Interface](https://github.com/immortalwrt/luci): Modern and modular interface to control the device via a web browser.
-  - [ImmortalWrt Packages](https://github.com/immortalwrt/packages): Community repository of ported packages.
-  - [OpenWrt Routing](https://github.com/openwrt/routing): Packages specifically focused on (mesh) routing.
-  - [OpenWrt Video](https://github.com/openwrt/video): Packages specifically focused on display servers and clients (Xorg and Wayland).
+推荐可选包（按需勾选 `<*>`）：
+- 排障工具：`ethtool-full`、`tcpdump`、`htop`
+- 策略路由：`luci-app-pbr`（注意勾选 `ip-full`，取消 `ip-tiny` 避免包冲突）
+- VPN 组件：`luci-proto-wireguard`、`wireguard-tools`
 
-## Support Information
-For a list of supported devices see the [OpenWrt Hardware Database](https://openwrt.org/supported_devices)
-  ### Documentation
-  - [Quick Start Guide](https://openwrt.org/docs/guide-quick-start/start)
-  - [User Guide](https://openwrt.org/docs/guide-user/start)
-  - [Developer Documentation](https://openwrt.org/docs/guide-developer/start)
-  - [Technical Reference](https://openwrt.org/docs/techref/start)
+### 3. 编译
+```bash
+make defconfig
+make download -j8
+make -j$(nproc)
+```
+编译产物位于 `bin/targets/rockchip/armv8/`，生成 `ext4-sysupgrade.img.gz` 和 `squashfs-sysupgrade.img.gz` 完整整盘镜像，可直接写盘。
 
-  ### Support Community
-  - Support Chat: group [@ctcgfw_openwrt_discuss](https://t.me/ctcgfw_openwrt_discuss) on [Telegram](https://telegram.org/).
-  - Support Chat: group [#immortalwrt](https://matrix.to/#/#immortalwrt:matrix.org) on [Matrix](https://matrix.org/).
+## 实测表现
 
-## License
-ImmortalWrt is licensed under [GPL-2.0-only](https://spdx.org/licenses/GPL-2.0-only.html).
+- **转发吞吐**：双向 TCP 转发约 830 Mbps。
+- **小包压测**：64 字节 UDP 四流合计 160 Mbps（约 31.25 万 PPS），长时间压测零丢包。
+- **网络稳定性**：JLSemi PHY 驱动工作稳定，网口热拔插恢复正常。
 
-## Acknowledgements
-<table>
-  <tr>
-    <td><a href="https://dlercloud.com/"><img src="https://user-images.githubusercontent.com/22235437/111103249-f9ec6e00-8588-11eb-9bfc-67cc55574555.png" width="183" height="52" border="0" alt="Dler Cloud"></a></td>
-    <td><a href="https://www.jetbrains.com/"><img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_square.png" width="120" height="120" border="0" alt="JetBrains Black Box Logo logo"></a></td>
-    <td><a href="https://sourceforge.net/"><img src="https://sourceforge.net/sflogo.php?type=17&group_id=3663829" alt="SourceForge" width=200></a></td>
-  </tr>
-</table>
+> **供电提示**：多核满载及大流量压测时峰值功耗较高，建议使用 5V/3A 及以上电源，避免供电抖动导致重启。
+
+## 关键代码索引
+
+| 模块 | 对应路径 |
+|---|---|
+| 固件板型定义 | [target/linux/rockchip/image/armv8.mk](target/linux/rockchip/image/armv8.mk) |
+| U-Boot 构建配置 | [package/boot/uboot-rockchip/Makefile](package/boot/uboot-rockchip/Makefile) |
+| JLSemi PHY 驱动 | [target/linux/rockchip/files/drivers/net/phy/](target/linux/rockchip/files/drivers/net/phy/) |
+| 6.12 内核/设备树补丁 | [target/linux/rockchip/patches-6.12/](target/linux/rockchip/patches-6.12/) |
+| IRQ / RPS 亲和性脚本 | [target/linux/rockchip/armv8/base-files/usr/libexec/platform/packet-steering.sh](target/linux/rockchip/armv8/base-files/usr/libexec/platform/packet-steering.sh) |
+| SQM 首次配置预设 | [target/linux/rockchip/armv8/base-files/etc/uci-defaults/99-lubancat2-sqm](target/linux/rockchip/armv8/base-files/etc/uci-defaults/99-lubancat2-sqm) |
+
+## 致谢与参考
+
+- [ImmortalWrt](https://github.com/immortalwrt/immortalwrt) / [OpenWrt](https://openwrt.org/)
+- [DHDAXCW/lede-rockchip](https://github.com/DHDAXCW/lede-rockchip)：JLSemi 驱动与 Rockchip 适配参考
+- [野火 EmbedFire](https://doc.embedfire.com/)：LubanCat 2 官方板级资料与设备树
