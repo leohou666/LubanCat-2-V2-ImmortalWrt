@@ -1,0 +1,23 @@
+Use the tested GMAC1 TX tap for the LubanCat 2 V2 JLSemi PHY.
+
+On the tested board the PHY already enables its internal 2 ns TX delay.
+The vendor MAC TX tap of 0x22 causes gigabit packet loss and peer RX FCS
+errors. A zero MAC TX tap eliminates those errors in the tested link,
+including a 60-second TCP download at 929 Mbit/s without retransmissions.
+
+Keep RX at 0x07 and retain RGMII mode. The RK3568 glue driver keeps its
+TX delay enable bit set even with a zero tap, matching the runtime test.
+GMAC0 timing is unchanged.
+
+--- a/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
+@@ -506,7 +506,8 @@
+ 		     &gmac1m1_rgmii_clk
+ 		     &gmac1m1_rgmii_bus>;
+ 
+-	tx_delay = <0x22>;
++	/* The JLSemi PHY provides an internal TX delay. */
++	tx_delay = <0x00>;
+ 	rx_delay = <0x07>;
+ 
+ 	phy-handle = <&rgmii_phy1>;

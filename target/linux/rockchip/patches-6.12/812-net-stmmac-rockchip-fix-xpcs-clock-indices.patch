@@ -1,0 +1,13 @@
+Keep the clock indices aligned with the XPCS clocks added by patch 710.
+RK_CLK_MAC_SPEED must select clk_mac_speed, not mac_clk_tx.
+
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+@@ -54,6 +54,7 @@
+ 	RK_ACLK_MAC = 0,
+ 	RK_PCLK_MAC,
+ 	RK_PCLK_XPCS,
++	RK_CLK_XPCS_EEE,
+ 	RK_MAC_CLK_TX,
+ 	RK_CLK_MAC_SPEED,
+ 	RK_MAC_CLK_RX,

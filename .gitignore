@@ -43,3 +43,5 @@ git-src
 .ccache
 .vscode*
 docs/
+learning/
+.vscode/

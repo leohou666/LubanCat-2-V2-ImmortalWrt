@@ -19,6 +19,8 @@
 #include <linux/module.h>
 #include <linux/netdevice.h>
 
+#include "jlsemi-lubancat-diag.h"
+
 #define DRIVER_VERSION		"1.2.9"
 #define DRIVER_NAME_100M	"JL1xxx Fast Ethernet " DRIVER_VERSION
 #define DRIVER_NAME_1000M	"JL2xxx Gigabit Ethernet " DRIVER_VERSION
@@ -229,6 +231,12 @@ static int jl2xxx_probe(struct phy_device *phydev)
 	jl2xxx->stats = kcalloc(jl2xxx->nstats, sizeof(u64), GFP_KERNEL);
 	if (!jl2xxx->stats)
 		return -ENOMEM;
+
+	err = jlsemi_lubancat_diag_add(phydev);
+	if (err) {
+		kfree(jl2xxx->stats);
+		return err;
+	}
 
 	return 0;
 }

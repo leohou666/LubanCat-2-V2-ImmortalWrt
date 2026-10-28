@@ -1,0 +1,23 @@
+Keep Linux interface names aligned with the LubanCat 2 V2 port numbering.
+The Rockchip stmmac label support is provided by patch 602; ethernet aliases
+alone do not determine the allocated netdev names. Keep timing and PHY
+configuration attached to their original GMAC controllers.
+
+--- a/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3568-lubancat-2.dts
+@@ -445,6 +445,7 @@
+ &gmac0 {
++	label = "eth0";
+ 	phy-mode = "rgmii";
+ 	clock_in_out = "output";
+ 
+ 	snps,reset-gpio = <&gpio2 RK_PD3 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;
+@@ -487,6 +488,7 @@
+ &gmac1 {
++	label = "eth1";
+ 	phy-mode = "rgmii";
+ 	clock_in_out = "output";
+ 
+ 	snps,reset-gpio = <&gpio3 RK_PA2 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;

@@ -1,0 +1,54 @@
+Add an opt-in diagnostic interface for LubanCat 2 V2 GMAC1.
+The implementation is supplied by the Rockchip files overlay.
+
+--- a/drivers/net/ethernet/stmicro/stmmac/Kconfig
++++ b/drivers/net/ethernet/stmicro/stmmac/Kconfig
+@@ -142,6 +142,16 @@
+ 	  This selects the Rockchip RK3288 SoC glue layer support for
+ 	  the stmmac device driver.
+ 
++config DWMAC_ROCKCHIP_LUBANCAT2_DIAGNOSTICS
++	bool "LubanCat 2 V2 RGMII diagnostics"
++	depends on DWMAC_ROCKCHIP && JLSEMI_PHY && SYSFS
++	default n
++	help
++	  Expose GMAC1 timing readback and a temporary TX delay control on
++	  LubanCat 2, plus read-only JLSemi internal RGMII delay status.
++	  TX writes require an active interface, affect only the TX tap
++	  field, and are not persisted. Use a serial console for testing.
++
+ config DWMAC_RZN1
+ 	tristate "Renesas RZ/N1 dwmac support"
+ 	default ARCH_RZN1
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+@@ -2102,6 +2102,8 @@
+ 	}
+ }
+ 
++#include "dwmac-rk-lubancat-diag.h"
++
+ static int rk_gmac_probe(struct platform_device *pdev)
+ {
+ 	struct plat_stmmacenet_data *plat_dat;
+@@ -2146,6 +2148,12 @@
+ 	if (ret)
+ 		goto err_gmac_powerdown;
+ 
++	ret = rk_lubancat_diag_add(&pdev->dev);
++	if (ret) {
++		stmmac_dvr_remove(&pdev->dev);
++		goto err_gmac_powerdown;
++	}
++
+ 	return 0;
+ 
+ err_gmac_powerdown:
+@@ -2158,6 +2166,7 @@
+ {
+ 	struct rk_priv_data *bsp_priv = get_stmmac_bsp_priv(&pdev->dev);
+ 
++	rk_lubancat_diag_remove(&pdev->dev);
+ 	stmmac_dvr_remove(&pdev->dev);
+ 
+ 	rk_gmac_powerdown(bsp_priv);
